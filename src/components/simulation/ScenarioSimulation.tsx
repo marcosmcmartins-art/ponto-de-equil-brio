@@ -6,7 +6,21 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { usePricingStore } from "@/store/pricingStore";
-import { TrendingUp, DollarSign, Target, RotateCcw, Package, ShoppingCart } from "lucide-react";
+import type { SavedScenario, ScenarioTotals } from "@/types/pricing";
+import { ScenarioManager } from "./ScenarioManager";
+import { ScenarioComparison } from "./ScenarioComparison";
+import {
+  TrendingUp,
+  DollarSign,
+  Target,
+  RotateCcw,
+  Package,
+  ShoppingCart,
+  Save,
+  FolderOpen,
+  BarChart3,
+  FileText,
+} from "lucide-react";
 
 interface SimulationItem {
   id: string;
@@ -33,10 +47,13 @@ const formatPercent = (value: number) => {
 };
 
 export const ScenarioSimulation = () => {
-  const { products, resaleProducts, getTotalFixedExpenses } = usePricingStore();
+  const { products, resaleProducts, getTotalFixedExpenses, savedScenarios } = usePricingStore();
   
   const [productForecasts, setProductForecasts] = useState<Record<string, number>>({});
   const [resaleForecasts, setResaleForecasts] = useState<Record<string, number>>({});
+  const [activeScenarioId, setActiveScenarioId] = useState<string | undefined>();
+  const [managerOpen, setManagerOpen] = useState(false);
+  const [comparisonOpen, setComparisonOpen] = useState(false);
   
   const totalFixedExpenses = getTotalFixedExpenses();
   
@@ -139,19 +156,27 @@ export const ScenarioSimulation = () => {
     }), { salesForecast: 0, revenue: 0, variableCosts: 0, contributionMargin: 0, fixedExpenseShare: 0, profit: 0 });
   }, [simulatedResale]);
 
-  const grandTotals = {
-    salesForecast: productTotals.salesForecast + resaleTotals.salesForecast,
+  const grandTotals: ScenarioTotals = {
     revenue: productTotals.revenue + resaleTotals.revenue,
     variableCosts: productTotals.variableCosts + resaleTotals.variableCosts,
     contributionMargin: productTotals.contributionMargin + resaleTotals.contributionMargin,
-    fixedExpenseShare: totalFixedExpenses,
+    fixedExpenses: totalFixedExpenses,
     profit: productTotals.profit + resaleTotals.profit,
   };
 
   const handleReset = () => {
     setProductForecasts({});
     setResaleForecasts({});
+    setActiveScenarioId(undefined);
   };
+
+  const handleLoadScenario = (scenario: SavedScenario) => {
+    setProductForecasts(scenario.productForecasts);
+    setResaleForecasts(scenario.resaleForecasts);
+    setActiveScenarioId(scenario.id);
+  };
+
+  const activeScenario = savedScenarios.find(s => s.id === activeScenarioId);
 
   const renderSimulationTable = (
     items: ReturnType<typeof calculateSimulation>,
@@ -196,10 +221,13 @@ export const ScenarioSimulation = () => {
                   type="number"
                   min="0"
                   value={forecasts[item.id] ?? originalForecasts[item.id] ?? item.salesForecast}
-                  onChange={(e) => setForecasts(prev => ({
-                    ...prev,
-                    [item.id]: Number(e.target.value) || 0
-                  }))}
+                  onChange={(e) => {
+                    setForecasts(prev => ({
+                      ...prev,
+                      [item.id]: Number(e.target.value) || 0
+                    }));
+                    setActiveScenarioId(undefined);
+                  }}
                   className="w-20 text-center h-8"
                 />
               </TableCell>
@@ -228,31 +256,46 @@ export const ScenarioSimulation = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <motion.h1
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="text-3xl font-heading font-bold text-foreground"
-        >
-          <span className="text-gradient">Simulação</span> de Cenários
-        </motion.h1>
-        <Button variant="outline" onClick={handleReset} className="gap-2">
-          <RotateCcw className="w-4 h-4" />
-          Limpar Simulação
-        </Button>
+      {/* Header with Actions */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <motion.h1
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="text-3xl font-heading font-bold text-foreground"
+          >
+            <span className="text-gradient">Simulação</span> de Cenários
+          </motion.h1>
+          {activeScenario && (
+            <span className="flex items-center gap-1.5 px-3 py-1 bg-primary/10 text-primary text-sm font-medium rounded-full">
+              <FileText className="w-3.5 h-3.5" />
+              {activeScenario.name}
+            </span>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" onClick={() => setManagerOpen(true)} className="gap-2">
+            <Save className="w-4 h-4" />
+            Salvar / Carregar
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setComparisonOpen(true)}
+            className="gap-2"
+            disabled={savedScenarios.length < 2}
+          >
+            <BarChart3 className="w-4 h-4" />
+            Comparar
+          </Button>
+          <Button variant="ghost" onClick={handleReset} className="gap-2">
+            <RotateCcw className="w-4 h-4" />
+            Limpar
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-        <Card className="glass border-border/50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-muted-foreground text-sm">
-              <Target className="w-4 h-4" />
-              <span>Vendas Prev.</span>
-            </div>
-            <p className="text-2xl font-bold mt-1">{grandTotals.salesForecast}</p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
         <Card className="glass border-border/50">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-muted-foreground text-sm">
@@ -283,10 +326,10 @@ export const ScenarioSimulation = () => {
         <Card className="glass border-border/50">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-muted-foreground text-sm">
-              <ShoppingCart className="w-4 h-4" />
+              <Target className="w-4 h-4" />
               <span>Desp. Fixas</span>
             </div>
-            <p className="text-2xl font-bold mt-1">{formatCurrency(grandTotals.fixedExpenseShare)}</p>
+            <p className="text-2xl font-bold mt-1">{formatCurrency(grandTotals.fixedExpenses)}</p>
           </CardContent>
         </Card>
         <Card className={`glass border-border/50 ${grandTotals.profit >= 0 ? 'bg-green-500/10' : 'bg-destructive/10'}`}>
@@ -418,6 +461,22 @@ export const ScenarioSimulation = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Scenario Manager Dialog */}
+      <ScenarioManager
+        isOpen={managerOpen}
+        onClose={() => setManagerOpen(false)}
+        currentForecasts={{ productForecasts, resaleForecasts }}
+        currentTotals={grandTotals}
+        onLoadScenario={handleLoadScenario}
+        activeScenarioId={activeScenarioId}
+      />
+
+      {/* Scenario Comparison Dialog */}
+      <ScenarioComparison
+        isOpen={comparisonOpen}
+        onClose={() => setComparisonOpen(false)}
+      />
     </div>
   );
 };
