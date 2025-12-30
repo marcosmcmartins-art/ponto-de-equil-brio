@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { RawMaterial, Product, FixedExpense, Employee, ResaleProduct, PricingConfig } from '@/types/pricing';
+import type { RawMaterial, Product, FixedExpense, Employee, ResaleProduct, PricingConfig, SavedScenario, ScenarioTotals } from '@/types/pricing';
 
 interface PricingState {
   rawMaterials: RawMaterial[];
@@ -9,6 +9,7 @@ interface PricingState {
   employees: Employee[];
   resaleProducts: ResaleProduct[];
   config: PricingConfig;
+  savedScenarios: SavedScenario[];
   
   // Raw Materials
   addRawMaterial: (material: Omit<RawMaterial, 'id' | 'pricePerMeasure'>) => void;
@@ -42,6 +43,12 @@ interface PricingState {
   
   // Calculations
   getFixedExpenseRateForProduct: (productRevenue: number) => number;
+  
+  // Scenarios
+  saveScenario: (name: string, description: string | undefined, productForecasts: Record<string, number>, resaleForecasts: Record<string, number>, totals: ScenarioTotals) => SavedScenario;
+  updateScenario: (id: string, updates: Partial<Omit<SavedScenario, 'id' | 'createdAt'>>) => void;
+  deleteScenario: (id: string) => void;
+  duplicateScenario: (id: string, newName: string) => SavedScenario | null;
 }
 
 const calculatePricePerMeasure = (pricePerUnit: number, correctionFactor: number): number => {
@@ -334,6 +341,7 @@ export const usePricingStore = create<PricingState>()(
           salesForecast: 200,
         },
       ],
+      savedScenarios: [],
       config: {
         defaultProfitMargin: 15,
         defaultFixedExpensesRate: 10,
@@ -562,6 +570,49 @@ export const usePricingStore = create<PricingState>()(
         const totalFixed = get().getTotalFixedExpenses() + get().getTotalEmployeeCost();
         if (totalRevenue === 0) return 0;
         return (productRevenue / totalRevenue) * totalFixed;
+      },
+      
+      // Scenarios
+      saveScenario: (name, description, productForecasts, resaleForecasts, totals) => {
+        const now = new Date().toISOString();
+        const newScenario: SavedScenario = {
+          id: crypto.randomUUID(),
+          name,
+          description,
+          createdAt: now,
+          updatedAt: now,
+          productForecasts,
+          resaleForecasts,
+          totals,
+        };
+        set((state) => ({
+          savedScenarios: [...state.savedScenarios, newScenario],
+        }));
+        return newScenario;
+      },
+      updateScenario: (id, updates) => set((state) => ({
+        savedScenarios: state.savedScenarios.map((s) =>
+          s.id === id ? { ...s, ...updates, updatedAt: new Date().toISOString() } : s
+        ),
+      })),
+      deleteScenario: (id) => set((state) => ({
+        savedScenarios: state.savedScenarios.filter((s) => s.id !== id),
+      })),
+      duplicateScenario: (id, newName) => {
+        const original = get().savedScenarios.find((s) => s.id === id);
+        if (!original) return null;
+        const now = new Date().toISOString();
+        const duplicated: SavedScenario = {
+          ...original,
+          id: crypto.randomUUID(),
+          name: newName,
+          createdAt: now,
+          updatedAt: now,
+        };
+        set((state) => ({
+          savedScenarios: [...state.savedScenarios, duplicated],
+        }));
+        return duplicated;
       },
     }),
     {

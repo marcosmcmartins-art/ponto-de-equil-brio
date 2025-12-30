@@ -99,3 +99,22 @@ export interface PricingConfig {
   laborChargesRate: number; // 21.77%
   socialChargesRate: number; // 32%
 }
+
+export interface ScenarioTotals {
+  revenue: number;
+  variableCosts: number;
+  contributionMargin: number;
+  fixedExpenses: number;
+  profit: number;
+}
+
+export interface SavedScenario {
+  id: string;
+  name: string;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+  productForecasts: Record<string, number>;
+  resaleForecasts: Record<string, number>;
+  totals: ScenarioTotals;
+}
