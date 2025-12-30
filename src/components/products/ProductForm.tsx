@@ -25,6 +25,11 @@ export const ProductForm = ({ product, onClose }: ProductFormProps) => {
     profitMargin: product?.profitMargin || config.defaultProfitMargin,
     fixedExpensesRate: product?.fixedExpensesRate || config.defaultFixedExpensesRate,
     taxes: product?.taxes || config.defaultTaxes,
+    freight: product?.freight || 0,
+    cardFee: product?.cardFee || config.defaultCardFee,
+    appFee: product?.appFee || config.defaultAppFee,
+    commission: product?.commission || config.defaultCommission,
+    salesForecast: product?.salesForecast || 0,
     finalPrice: product?.finalPrice || 0,
   });
 
