@@ -8,12 +8,16 @@ import {
   Receipt,
   Users,
   ShoppingCart,
-  Table
+  Table,
+  BarChart3
 } from "lucide-react";
 import { StatCard } from "./StatCard";
 import { usePricingStore } from "@/store/pricingStore";
 import { Button } from "@/components/ui/button";
-
+import { CostDistributionChart } from "./CostDistributionChart";
+import { ProfitMarginChart } from "./ProfitMarginChart";
+import { RevenueMixChart } from "./RevenueMixChart";
+import { ExpensesByCategoryChart } from "./ExpensesByCategoryChart";
 interface DashboardOverviewProps {
   onNavigate: (view: 'materials' | 'products' | 'calculator' | 'expenses' | 'employees' | 'resale' | 'pricing') => void;
 }
@@ -121,6 +125,30 @@ export const DashboardOverview = ({ onNavigate }: DashboardOverviewProps) => {
           delay={0.8}
         />
       </div>
+
+      {/* Financial Analysis Charts */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.5 }}
+        className="space-y-4"
+      >
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <BarChart3 className="w-5 h-5 text-primary" />
+          </div>
+          <h2 className="text-2xl font-heading font-semibold text-foreground">
+            Análise Financeira
+          </h2>
+        </div>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <CostDistributionChart />
+          <ProfitMarginChart />
+          <RevenueMixChart />
+          <ExpensesByCategoryChart />
+        </div>
+      </motion.div>
 
       {/* Quick Actions */}
       <motion.div
