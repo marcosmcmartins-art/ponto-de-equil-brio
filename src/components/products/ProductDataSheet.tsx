@@ -6,17 +6,25 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { usePricingStore } from "@/store/pricingStore";
-import { ClipboardList, Search, Package, DollarSign, Layers, ArrowRight, X } from "lucide-react";
+import { ProductIngredient } from "@/types/pricing";
+import { ClipboardList, Search, Package, DollarSign, Layers, ArrowRight, X, Edit2, Plus, Trash2, Save, XCircle } from "lucide-react";
+import { toast } from "sonner";
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 };
 
 export const ProductDataSheet = () => {
-  const { products, rawMaterials } = usePricingStore();
+  const { products, rawMaterials, updateProduct, config } = usePricingStore();
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [compareProductId, setCompareProductId] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState("");
+  
+  // Editing state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedIngredients, setEditedIngredients] = useState<ProductIngredient[]>([]);
+  const [newMaterialId, setNewMaterialId] = useState<string>("");
+  const [newQuantity, setNewQuantity] = useState<string>("");
 
   const filteredProducts = useMemo(() => {
     if (!searchTerm) return products;
@@ -29,11 +37,17 @@ export const ProductDataSheet = () => {
   const selectedProduct = products.find(p => p.id === selectedProductId);
   const compareProduct = products.find(p => p.id === compareProductId);
 
-  const getIngredientDetails = (product: typeof selectedProduct) => {
-    if (!product) return [];
-    return product.ingredients.map(ing => {
+  // Get available materials for adding (not already in the composition)
+  const availableMaterials = useMemo(() => {
+    const usedIds = editedIngredients.map(ing => ing.rawMaterialId);
+    return rawMaterials.filter(m => !usedIds.includes(m.id));
+  }, [rawMaterials, editedIngredients]);
+
+  const getIngredientDetails = (ingredients: ProductIngredient[]) => {
+    return ingredients.map(ing => {
       const material = rawMaterials.find(m => m.id === ing.rawMaterialId);
       return {
+        rawMaterialId: ing.rawMaterialId,
         code: material?.code || 0,
         name: material?.name || "Material não encontrado",
         unit: material?.unit || "-",
@@ -44,11 +58,117 @@ export const ProductDataSheet = () => {
     });
   };
 
+  const startEditing = () => {
+    if (selectedProduct) {
+      setEditedIngredients([...selectedProduct.ingredients]);
+      setIsEditing(true);
+    }
+  };
+
+  const cancelEditing = () => {
+    setIsEditing(false);
+    setEditedIngredients([]);
+    setNewMaterialId("");
+    setNewQuantity("");
+  };
+
+  const handleUpdateQuantity = (rawMaterialId: string, newQty: number) => {
+    const material = rawMaterials.find(m => m.id === rawMaterialId);
+    setEditedIngredients(prev => 
+      prev.map(ing => 
+        ing.rawMaterialId === rawMaterialId 
+          ? { ...ing, quantity: newQty, value: (material?.pricePerMeasure || 0) * newQty }
+          : ing
+      )
+    );
+  };
+
+  const handleRemoveIngredient = (rawMaterialId: string) => {
+    setEditedIngredients(prev => prev.filter(ing => ing.rawMaterialId !== rawMaterialId));
+  };
+
+  const handleAddIngredient = () => {
+    if (!newMaterialId || !newQuantity) {
+      toast.error("Selecione a matéria-prima e informe a quantidade");
+      return;
+    }
+    
+    const qty = parseFloat(newQuantity);
+    if (isNaN(qty) || qty <= 0) {
+      toast.error("Quantidade inválida");
+      return;
+    }
+
+    const material = rawMaterials.find(m => m.id === newMaterialId);
+    if (!material) return;
+
+    const newIngredient: ProductIngredient = {
+      rawMaterialId: newMaterialId,
+      quantity: qty,
+      value: material.pricePerMeasure * qty
+    };
+
+    setEditedIngredients(prev => [...prev, newIngredient]);
+    setNewMaterialId("");
+    setNewQuantity("");
+  };
+
+  const handleSave = () => {
+    if (!selectedProduct) return;
+
+    // Calculate new costs
+    const ingredientsCost = editedIngredients.reduce((sum, ing) => sum + ing.value, 0);
+    const totalVariableCost = ingredientsCost + selectedProduct.laborCost;
+    
+    // Recalculate prices using the same formula from the store
+    const totalDeductions = 
+      selectedProduct.profitMargin + 
+      config.defaultFixedExpensesRate + 
+      selectedProduct.taxes + 
+      selectedProduct.freight + 
+      selectedProduct.cardFee + 
+      selectedProduct.appFee + 
+      selectedProduct.commission;
+    
+    const markupDivisor = (100 - totalDeductions) / 100;
+    const suggestedPrice = markupDivisor > 0 ? totalVariableCost / markupDivisor : totalVariableCost;
+    const markupMultiplier = totalVariableCost > 0 ? suggestedPrice / totalVariableCost : 1;
+    const contributionMargin = suggestedPrice - totalVariableCost;
+    const expectedRevenue = suggestedPrice * selectedProduct.salesForecast;
+
+    updateProduct(selectedProduct.id, {
+      ingredients: editedIngredients,
+      totalVariableCost,
+      suggestedPrice,
+      finalPrice: suggestedPrice,
+      markupMultiplier,
+      contributionMargin,
+      expectedRevenue
+    });
+
+    setIsEditing(false);
+    setEditedIngredients([]);
+    toast.success("Ficha técnica atualizada com sucesso!");
+  };
+
+  // Calculate costs for editing preview
+  const editingIngredientsCost = useMemo(() => {
+    return editedIngredients.reduce((sum, ing) => sum + ing.value, 0);
+  }, [editedIngredients]);
+
   const renderProductCard = (product: typeof selectedProduct, title: string, onClear?: () => void) => {
     if (!product) return null;
     
-    const ingredients = getIngredientDetails(product);
-    const ingredientsCost = ingredients.reduce((sum, ing) => sum + ing.value, 0);
+    const isSelectedProduct = product.id === selectedProductId;
+    const ingredientsToShow = isSelectedProduct && isEditing ? editedIngredients : product.ingredients;
+    const ingredients = getIngredientDetails(ingredientsToShow);
+    const ingredientsCost = isSelectedProduct && isEditing 
+      ? editingIngredientsCost 
+      : ingredients.reduce((sum, ing) => sum + ing.value, 0);
+    
+    const currentTotalVariableCost = isSelectedProduct && isEditing 
+      ? editingIngredientsCost + product.laborCost 
+      : product.totalVariableCost;
 
     return (
       <Card className="glass border-border/50 flex-1">
@@ -58,11 +178,19 @@ export const ProductDataSheet = () => {
               <Package className="w-5 h-5 text-primary" />
               {title}
             </CardTitle>
-            {onClear && (
-              <Button variant="ghost" size="icon" onClick={onClear}>
-                <X className="w-4 h-4" />
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              {isSelectedProduct && !isEditing && (
+                <Button variant="outline" size="sm" onClick={startEditing} className="gap-2">
+                  <Edit2 className="w-4 h-4" />
+                  Editar Ficha
+                </Button>
+              )}
+              {onClear && (
+                <Button variant="ghost" size="icon" onClick={onClear}>
+                  <X className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -89,6 +217,9 @@ export const ProductDataSheet = () => {
             <h4 className="font-semibold mb-2 flex items-center gap-2">
               <Layers className="w-4 h-4 text-primary" />
               Composição do Produto
+              {isSelectedProduct && isEditing && (
+                <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">Editando</span>
+              )}
             </h4>
             <div className="border rounded-lg overflow-hidden">
               <Table>
@@ -100,6 +231,7 @@ export const ProductDataSheet = () => {
                     <TableHead className="text-center">Unid</TableHead>
                     <TableHead className="text-right">Qtd</TableHead>
                     <TableHead className="text-right">Valor</TableHead>
+                    {isSelectedProduct && isEditing && <TableHead className="w-12"></TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -109,13 +241,38 @@ export const ProductDataSheet = () => {
                       <TableCell className="text-muted-foreground">Insumo</TableCell>
                       <TableCell className="font-medium">{ing.name}</TableCell>
                       <TableCell className="text-center">{ing.unit}</TableCell>
-                      <TableCell className="text-right">{ing.quantity.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">
+                        {isSelectedProduct && isEditing ? (
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={ing.quantity}
+                            onChange={(e) => handleUpdateQuantity(ing.rawMaterialId, parseFloat(e.target.value) || 0)}
+                            className="w-20 text-right h-8"
+                          />
+                        ) : (
+                          ing.quantity.toFixed(2)
+                        )}
+                      </TableCell>
                       <TableCell className="text-right font-medium">{formatCurrency(ing.value)}</TableCell>
+                      {isSelectedProduct && isEditing && (
+                        <TableCell>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => handleRemoveIngredient(ing.rawMaterialId)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                   {ingredients.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={isSelectedProduct && isEditing ? 7 : 6} className="text-center text-muted-foreground py-8">
                         Nenhum ingrediente cadastrado
                       </TableCell>
                     </TableRow>
@@ -123,6 +280,40 @@ export const ProductDataSheet = () => {
                 </TableBody>
               </Table>
             </div>
+
+            {/* Add Ingredient Row */}
+            {isSelectedProduct && isEditing && (
+              <div className="mt-3 p-3 bg-muted/30 rounded-lg border border-dashed border-border">
+                <div className="flex items-center gap-3">
+                  <Plus className="w-4 h-4 text-muted-foreground" />
+                  <Select value={newMaterialId} onValueChange={setNewMaterialId}>
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Selecione matéria-prima..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableMaterials.map(m => (
+                        <SelectItem key={m.id} value={m.id}>
+                          {m.code} - {m.name} ({formatCurrency(m.pricePerMeasure)}/{m.unit})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="Qtd"
+                    value={newQuantity}
+                    onChange={(e) => setNewQuantity(e.target.value)}
+                    className="w-24"
+                  />
+                  <Button size="sm" onClick={handleAddIngredient} className="gap-1">
+                    <Plus className="w-4 h-4" />
+                    Adicionar
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Cost Summary */}
@@ -142,7 +333,7 @@ export const ProductDataSheet = () => {
               </div>
               <div className="flex justify-between items-center p-3 bg-primary/10 rounded-lg border border-primary/30">
                 <span className="font-semibold text-primary">Custos Variáveis Totais</span>
-                <span className="font-bold text-primary text-lg">{formatCurrency(product.totalVariableCost)}</span>
+                <span className="font-bold text-primary text-lg">{formatCurrency(currentTotalVariableCost)}</span>
               </div>
             </div>
           </div>
@@ -166,6 +357,20 @@ export const ProductDataSheet = () => {
               <p className="font-bold">{product.markupMultiplier.toFixed(2)}x</p>
             </div>
           </div>
+
+          {/* Save/Cancel Buttons */}
+          {isSelectedProduct && isEditing && (
+            <div className="flex justify-end gap-3 pt-2 border-t border-border">
+              <Button variant="outline" onClick={cancelEditing} className="gap-2">
+                <XCircle className="w-4 h-4" />
+                Cancelar
+              </Button>
+              <Button onClick={handleSave} className="gap-2">
+                <Save className="w-4 h-4" />
+                Salvar Alterações
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     );
@@ -199,7 +404,13 @@ export const ProductDataSheet = () => {
             </div>
             <div className="flex-1">
               <label className="text-sm text-muted-foreground mb-1 block">Selecionar Produto</label>
-              <Select value={selectedProductId} onValueChange={setSelectedProductId}>
+              <Select 
+                value={selectedProductId} 
+                onValueChange={(value) => {
+                  setSelectedProductId(value);
+                  cancelEditing();
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Escolha um produto..." />
                 </SelectTrigger>
