@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { usePricingStore } from "@/store/pricingStore";
 import { ProductIngredient } from "@/types/pricing";
-import { ClipboardList, Search, Package, DollarSign, Layers, ArrowRight, X, Edit2, Plus, Trash2, Save, XCircle } from "lucide-react";
+import { ClipboardList, Search, Package, DollarSign, Layers, ArrowRight, X, Edit2, Plus, Trash2, Save, XCircle, FileDown, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { exportToPdf } from "@/lib/pdfExport";
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -25,6 +26,27 @@ export const ProductDataSheet = () => {
   const [editedIngredients, setEditedIngredients] = useState<ProductIngredient[]>([]);
   const [newMaterialId, setNewMaterialId] = useState<string>("");
   const [newQuantity, setNewQuantity] = useState<string>("");
+  
+  // PDF export state
+  const productCardRef = useRef<HTMLDivElement>(null);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportPdf = async () => {
+    if (!productCardRef.current || !selectedProduct) return;
+    setIsExporting(true);
+    try {
+      await exportToPdf(productCardRef.current, {
+        title: `Ficha Técnica - ${selectedProduct.name}`,
+        filename: `Ficha_Tecnica_${selectedProduct.code}`,
+      });
+      toast.success("PDF exportado com sucesso!");
+    } catch (error) {
+      toast.error("Erro ao exportar PDF");
+      console.error(error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const filteredProducts = useMemo(() => {
     if (!searchTerm) return products;
@@ -180,10 +202,26 @@ export const ProductDataSheet = () => {
             </CardTitle>
             <div className="flex items-center gap-2">
               {isSelectedProduct && !isEditing && (
-                <Button variant="outline" size="sm" onClick={startEditing} className="gap-2">
-                  <Edit2 className="w-4 h-4" />
-                  Editar Ficha
-                </Button>
+                <>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleExportPdf}
+                    disabled={isExporting}
+                    className="gap-2"
+                  >
+                    {isExporting ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <FileDown className="w-4 h-4" />
+                    )}
+                    Exportar PDF
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={startEditing} className="gap-2">
+                    <Edit2 className="w-4 h-4" />
+                    Editar Ficha
+                  </Button>
+                </>
               )}
               {onClear && (
                 <Button variant="ghost" size="icon" onClick={onClear}>
@@ -446,7 +484,9 @@ export const ProductDataSheet = () => {
       {/* Product Cards */}
       {selectedProduct ? (
         <div className="flex gap-6">
-          {renderProductCard(selectedProduct, "Produto Selecionado")}
+          <div ref={productCardRef} className="flex-1">
+            {renderProductCard(selectedProduct, "Produto Selecionado")}
+          </div>
           {compareProduct && (
             <>
               <div className="flex items-center">

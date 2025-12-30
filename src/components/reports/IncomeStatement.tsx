@@ -1,8 +1,10 @@
-import { useMemo } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { usePricingStore } from "@/store/pricingStore";
-import { FileText, TrendingUp, TrendingDown, Minus } from "lucide-react";
-
+import { FileText, TrendingUp, TrendingDown, FileDown, Loader2 } from "lucide-react";
+import { exportToPdf } from "@/lib/pdfExport";
+import { toast } from "sonner";
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 };
@@ -14,6 +16,25 @@ const formatPercent = (value: number, total: number) => {
 
 export const IncomeStatement = () => {
   const { products, resaleProducts, getTotalFixedExpenses, getTotalEmployeeCost } = usePricingStore();
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportPdf = async () => {
+    if (!contentRef.current) return;
+    setIsExporting(true);
+    try {
+      await exportToPdf(contentRef.current, {
+        title: "Demonstração de Resultado do Exercício (DRE)",
+        filename: "DRE_Precificacao",
+      });
+      toast.success("PDF exportado com sucesso!");
+    } catch (error) {
+      toast.error("Erro ao exportar PDF");
+      console.error(error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const dre = useMemo(() => {
     let grossRevenue = 0;
@@ -118,13 +139,27 @@ export const IncomeStatement = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" ref={contentRef}>
       <Card className="glass border-border/50">
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <FileText className="w-5 h-5 text-primary" />
             Demonstração de Resultado do Exercício (DRE)
           </CardTitle>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleExportPdf}
+            disabled={isExporting}
+            className="gap-2"
+          >
+            {isExporting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <FileDown className="w-4 h-4" />
+            )}
+            Exportar PDF
+          </Button>
         </CardHeader>
         <CardContent>
           <div className="divide-y divide-border/50">
