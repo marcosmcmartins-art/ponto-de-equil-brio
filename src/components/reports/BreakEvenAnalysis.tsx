@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePricingStore } from "@/store/pricingStore";
 import { Target, TrendingUp, DollarSign, Info, Ticket, AlertTriangle, CheckCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-
+import { BreakEvenChart } from "./BreakEvenChart";
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 };
@@ -107,6 +107,8 @@ export const BreakEvenAnalysis = ({ desiredProfit }: BreakEvenAnalysisProps) => 
   return (
     <TooltipProvider>
       <div className="space-y-6">
+        {/* Break-Even Chart */}
+        <BreakEvenChart desiredProfit={desiredProfit} />
         {/* Input Summary */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="glass border-border/50">
