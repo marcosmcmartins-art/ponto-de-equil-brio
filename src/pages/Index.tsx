@@ -6,8 +6,12 @@ import { DashboardOverview } from "@/components/dashboard/DashboardOverview";
 import { RawMaterialsList } from "@/components/materials/RawMaterialsList";
 import { ProductsList } from "@/components/products/ProductsList";
 import { PricingCalculator } from "@/components/calculator/PricingCalculator";
+import { FixedExpensesList } from "@/components/expenses/FixedExpensesList";
+import { EmployeesList } from "@/components/employees/EmployeesList";
+import { ResaleProductsList } from "@/components/commerce/ResaleProductsList";
+import { PricingTable } from "@/components/pricing/PricingTable";
 
-type View = 'dashboard' | 'materials' | 'products' | 'calculator';
+type View = 'dashboard' | 'materials' | 'products' | 'calculator' | 'expenses' | 'employees' | 'resale' | 'pricing';
 
 const Index = () => {
   const [currentView, setCurrentView] = useState<View>('dashboard');
@@ -27,6 +31,14 @@ const Index = () => {
         return <ProductsList />;
       case 'calculator':
         return <PricingCalculator />;
+      case 'expenses':
+        return <FixedExpensesList />;
+      case 'employees':
+        return <EmployeesList />;
+      case 'resale':
+        return <ResaleProductsList />;
+      case 'pricing':
+        return <PricingTable />;
       default:
         return <DashboardOverview onNavigate={handleNavigate} />;
     }

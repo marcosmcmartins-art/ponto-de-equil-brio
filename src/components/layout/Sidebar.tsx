@@ -6,13 +6,17 @@ import {
   Package, 
   Calculator,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Receipt,
+  Users,
+  ShoppingCart,
+  Table
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface SidebarProps {
   currentView: string;
-  onNavigate: (view: 'dashboard' | 'materials' | 'products' | 'calculator') => void;
+  onNavigate: (view: 'dashboard' | 'materials' | 'products' | 'calculator' | 'expenses' | 'employees' | 'resale' | 'pricing') => void;
   collapsed: boolean;
   onToggleCollapse: () => void;
 }
@@ -21,7 +25,11 @@ const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'materials', label: 'Matérias-Primas', icon: Boxes },
   { id: 'products', label: 'Produtos', icon: Package },
+  { id: 'expenses', label: 'Despesas Fixas', icon: Receipt },
+  { id: 'employees', label: 'Funcionários', icon: Users },
+  { id: 'resale', label: 'Produtos Revenda', icon: ShoppingCart },
   { id: 'calculator', label: 'Calculadora', icon: Calculator },
+  { id: 'pricing', label: 'Tabela de Preços', icon: Table },
 ] as const;
 
 export const Sidebar = ({ currentView, onNavigate, collapsed, onToggleCollapse }: SidebarProps) => {
