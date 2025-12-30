@@ -5,13 +5,16 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { DashboardOverview } from "@/components/dashboard/DashboardOverview";
 import { RawMaterialsList } from "@/components/materials/RawMaterialsList";
 import { ProductsList } from "@/components/products/ProductsList";
+import { ProductDataSheet } from "@/components/products/ProductDataSheet";
 import { PricingCalculator } from "@/components/calculator/PricingCalculator";
 import { FixedExpensesList } from "@/components/expenses/FixedExpensesList";
 import { EmployeesList } from "@/components/employees/EmployeesList";
 import { ResaleProductsList } from "@/components/commerce/ResaleProductsList";
 import { PricingTable } from "@/components/pricing/PricingTable";
+import { ScenarioSimulation } from "@/components/simulation/ScenarioSimulation";
+import { ManagementReport } from "@/components/reports/ManagementReport";
 
-type View = 'dashboard' | 'materials' | 'products' | 'calculator' | 'expenses' | 'employees' | 'resale' | 'pricing';
+type View = 'dashboard' | 'materials' | 'products' | 'calculator' | 'expenses' | 'employees' | 'resale' | 'pricing' | 'datasheet' | 'simulation' | 'reports';
 
 const Index = () => {
   const [currentView, setCurrentView] = useState<View>('dashboard');
@@ -29,6 +32,8 @@ const Index = () => {
         return <RawMaterialsList />;
       case 'products':
         return <ProductsList />;
+      case 'datasheet':
+        return <ProductDataSheet />;
       case 'calculator':
         return <PricingCalculator />;
       case 'expenses':
@@ -39,6 +44,10 @@ const Index = () => {
         return <ResaleProductsList />;
       case 'pricing':
         return <PricingTable />;
+      case 'simulation':
+        return <ScenarioSimulation />;
+      case 'reports':
+        return <ManagementReport />;
       default:
         return <DashboardOverview onNavigate={handleNavigate} />;
     }

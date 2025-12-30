@@ -10,13 +10,16 @@ import {
   Receipt,
   Users,
   ShoppingCart,
-  Table
+  Table,
+  ClipboardList,
+  LineChart,
+  FileBarChart
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface SidebarProps {
   currentView: string;
-  onNavigate: (view: 'dashboard' | 'materials' | 'products' | 'calculator' | 'expenses' | 'employees' | 'resale' | 'pricing') => void;
+  onNavigate: (view: 'dashboard' | 'materials' | 'products' | 'calculator' | 'expenses' | 'employees' | 'resale' | 'pricing' | 'datasheet' | 'simulation' | 'reports') => void;
   collapsed: boolean;
   onToggleCollapse: () => void;
 }
@@ -25,11 +28,13 @@ const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'materials', label: 'Matérias-Primas', icon: Boxes },
   { id: 'products', label: 'Produtos', icon: Package },
+  { id: 'datasheet', label: 'Ficha Técnica', icon: ClipboardList },
   { id: 'expenses', label: 'Despesas Fixas', icon: Receipt },
   { id: 'employees', label: 'Funcionários', icon: Users },
   { id: 'resale', label: 'Produtos Revenda', icon: ShoppingCart },
-  { id: 'calculator', label: 'Calculadora', icon: Calculator },
   { id: 'pricing', label: 'Tabela de Preços', icon: Table },
+  { id: 'simulation', label: 'Simulação', icon: LineChart },
+  { id: 'reports', label: 'Relatórios', icon: FileBarChart },
 ] as const;
 
 export const Sidebar = ({ currentView, onNavigate, collapsed, onToggleCollapse }: SidebarProps) => {
