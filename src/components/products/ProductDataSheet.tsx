@@ -214,12 +214,12 @@ export const ProductDataSheet = () => {
             </div>
             <div className="flex-1">
               <label className="text-sm text-muted-foreground mb-1 block">Comparar com</label>
-              <Select value={compareProductId} onValueChange={setCompareProductId}>
+              <Select value={compareProductId} onValueChange={(value) => setCompareProductId(value === "none" ? "" : value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Comparar com outro..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhum</SelectItem>
+                  <SelectItem value="none">Nenhum</SelectItem>
                   {products.filter(p => p.id !== selectedProductId).map(p => (
                     <SelectItem key={p.id} value={p.id}>
                       {p.code} - {p.name}
