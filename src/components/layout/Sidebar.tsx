@@ -16,6 +16,7 @@ import {
   FileBarChart
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface SidebarProps {
   currentView: string;
@@ -73,43 +74,61 @@ export const Sidebar = ({ currentView, onNavigate, collapsed, onToggleCollapse }
         </Button>
       </div>
 
-      <nav className="p-2 space-y-1">
-        {menuItems.map((item, index) => {
-          const isActive = currentView === item.id;
-          return (
-            <motion.button
-              key={item.id}
-              initial={{ x: -20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ delay: index * 0.1 }}
-              onClick={() => onNavigate(item.id)}
-              className={cn(
-                "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200",
-                isActive 
-                  ? "bg-primary/10 text-primary" 
-                  : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
-              )}
-            >
-              <item.icon className={cn("w-5 h-5 shrink-0", isActive && "text-primary")} />
-              {!collapsed && (
-                <motion.span
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="font-medium"
-                >
-                  {item.label}
-                </motion.span>
-              )}
-              {isActive && !collapsed && (
-                <motion.div
-                  layoutId="activeIndicator"
-                  className="ml-auto w-1.5 h-1.5 bg-primary rounded-full"
-                />
-              )}
-            </motion.button>
-          );
-        })}
-      </nav>
+      <TooltipProvider delayDuration={0}>
+        <nav className="p-2 space-y-1">
+          {menuItems.map((item, index) => {
+            const isActive = currentView === item.id;
+            
+            const menuButton = (
+              <motion.button
+                key={item.id}
+                initial={{ x: -20, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: index * 0.1 }}
+                onClick={() => onNavigate(item.id)}
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200",
+                  isActive 
+                    ? "bg-primary/10 text-primary" 
+                    : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
+                )}
+              >
+                <item.icon className={cn("w-5 h-5 shrink-0", isActive && "text-primary")} />
+                {!collapsed && (
+                  <motion.span
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="font-medium"
+                  >
+                    {item.label}
+                  </motion.span>
+                )}
+                {isActive && !collapsed && (
+                  <motion.div
+                    layoutId="activeIndicator"
+                    className="ml-auto w-1.5 h-1.5 bg-primary rounded-full"
+                  />
+                )}
+              </motion.button>
+            );
+
+            if (collapsed) {
+              return (
+                <Tooltip key={item.id}>
+                  <TooltipTrigger asChild>
+                    {menuButton}
+                  </TooltipTrigger>
+                  <TooltipContent side="right" sideOffset={10}>
+                    {item.label}
+                  </TooltipContent>
+                </Tooltip>
+              );
+            }
+
+            return menuButton;
+          })}
+        </nav>
+      </TooltipProvider>
     </motion.aside>
   );
 };
