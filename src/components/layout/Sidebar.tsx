@@ -28,7 +28,7 @@ const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'materials', label: 'Matérias-Primas', icon: Boxes },
   { id: 'products', label: 'Produtos', icon: Package },
-  { id: 'datasheet', label: 'Ficha Técnica', icon: ClipboardList },
+  { id: 'datasheet', label: 'Formulação Técnica', icon: ClipboardList },
   { id: 'expenses', label: 'Despesas Fixas', icon: Receipt },
   { id: 'employees', label: 'Funcionários', icon: Users },
   { id: 'resale', label: 'Produtos Revenda', icon: ShoppingCart },
